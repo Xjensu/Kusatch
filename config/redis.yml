@@ -1,0 +1,11 @@
+development:
+  url: <%= ENV.fetch('REDIS_URL', 'redis://main-redis:6379/0') %>
+  password: <%= ENV['REDIS_PASSWORD'] %>
+  pool: 5
+  timeout: 5
+
+production:
+  url: <%= ENV.fetch('REDIS_URL', 'redis://main-redis:6379/0') %>
+  password: <%= ENV['REDIS_PASSWORD'] %>
+  pool: 5
+  timeout: 5
