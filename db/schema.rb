@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_04_19_173026) do
+ActiveRecord::Schema[8.0].define(version: 2025_04_24_182854) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -21,6 +21,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_04_19_173026) do
     t.string "content"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_blogs_on_created_at"
+    t.index ["title"], name: "index_blogs_on_title"
     t.index ["user_id"], name: "index_blogs_on_user_id"
   end
 
@@ -28,40 +30,33 @@ ActiveRecord::Schema[8.0].define(version: 2025_04_19_173026) do
     t.bigint "blog_id", null: false
     t.bigint "user_id", null: false
     t.bigint "parent_comment_id"
-    t.string "text"
+    t.string "text", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["blog_id", "created_at"], name: "index_comments_on_blog_id_and_created_at"
     t.index ["blog_id"], name: "index_comments_on_blog_id"
     t.index ["parent_comment_id"], name: "index_comments_on_parent_comment_id"
     t.index ["user_id"], name: "index_comments_on_user_id"
-  end
-
-  create_table "refresh_tokens", force: :cascade do |t|
-    t.bigint "user_id", null: false
-    t.string "token"
-    t.string "hashed_token"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["token"], name: "index_refresh_tokens_on_token", unique: true
-    t.index ["user_id"], name: "index_refresh_tokens_on_user_id"
   end
 
   create_table "users", force: :cascade do |t|
     t.string "first_name"
     t.string "last_name"
     t.string "username"
-    t.string "email"
-    t.string "password_digest"
+    t.string "email", null: false
+    t.string "encrypted_password", null: false
     t.boolean "is_moderator", default: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "reset_password_token"
+    t.datetime "reset_password_sent_at"
+    t.datetime "remember_created_at"
     t.index ["email"], name: "index_users_on_email", unique: true
-    t.index ["username"], name: "index_users_on_username", unique: true
+    t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
   add_foreign_key "blogs", "users"
   add_foreign_key "comments", "blogs"
   add_foreign_key "comments", "comments", column: "parent_comment_id"
   add_foreign_key "comments", "users"
-  add_foreign_key "refresh_tokens", "users"
 end

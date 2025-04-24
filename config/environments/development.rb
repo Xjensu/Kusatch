@@ -20,13 +20,12 @@ Rails.application.configure do
   # Do not eager load code on boot.
   config.eager_load = false
 
-  # Show full error reports.
-  config.consider_all_requests_local = true
 
   # Enable server timing.
   config.server_timing = true
 
-
+  config.consider_all_requests_local = false 
+  config.action_dispatch.show_exceptions = true
 
   # Enable/disable Action Controller caching. By default Action Controller caching is disabled.
   # Run rails dev:cache to toggle Action Controller caching.

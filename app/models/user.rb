@@ -1,5 +1,8 @@
 class User < ApplicationRecord
-  has_secure_password
+  # Include default devise modules. Others available are:
+  # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
+  devise :database_authenticatable, :registerable,
+         :recoverable, :rememberable, :validatable
   has_many :blogs, dependent: :destroy
   has_many :comments, dependent: :destroy
 
@@ -10,6 +13,9 @@ class User < ApplicationRecord
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :password, presence: true, length: { minimum: 6 }, on: :create
 
+  validates :password, confirmation: true, allow_blank: true
+  validate :current_password_is_correct, if: :password_changed?
+
   devise :database_authenticatable, :registerable, :recoverable, :rememberable, :validatable
 
   def full_name
@@ -18,5 +24,15 @@ class User < ApplicationRecord
   
   def invalidate_all_refresh_tokens!
     refresh_tokens.delete_all
+  end
+
+  def current_password_is_correct
+    return if current_password.blank? || valid_password?(current_password)
+
+    errors.add(:current_password, 'is incorrect')
+  end
+
+  def password_changed?
+    encrypted_password_changed?
   end
 end

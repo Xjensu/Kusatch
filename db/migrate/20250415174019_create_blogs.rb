@@ -8,7 +8,7 @@ class CreateBlogs < ActiveRecord::Migration[8.0]
 
       t.timestamps
     end
-    add_index :posts, :created_at
-    add_index :posts, :title, using: :gin, opclass: :gin_trgm_ops
+    add_index :blogs, :created_at
+    add_index :blogs, :title
   end
 end

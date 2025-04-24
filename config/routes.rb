@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  devise_for :users
   require 'sidekiq/web'
   
   Sidekiq::Web.use Rack::Auth::Basic do |username, password|
@@ -11,9 +12,10 @@ Rails.application.routes.draw do
   post '/register', to: 'users#create'
   get "/me", to: "users#me"
   get '/user/:id', to: 'users#show'
-  
+  patch '/user/update', to: 'users#update'
+  delete '/user/delete', to: 'users#destroy'
+ 
   post "/auth/login", to: "auth#login"
-  post '/auth/revoke', to: 'auth#revoke'
 
   get '/blogs', to: 'blogs#index'
   get '/blogs/:id', to: 'blogs#show'

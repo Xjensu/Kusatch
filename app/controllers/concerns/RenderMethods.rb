@@ -27,7 +27,7 @@ module RenderMethods
     '422': :unprocessable_entity,
     '423': :locked,
     '429': :too_many_requests,
-    '500': :interal_server_error,
+    '500': :internal_server_error,
     '501': :not_implemented,
     '502': :bad_geteway,
     '507': :insufficient_storage,

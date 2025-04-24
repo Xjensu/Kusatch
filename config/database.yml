@@ -9,12 +9,14 @@ default: &default
   port: <%= ENV['POSTGRES_PORT'] || 5432 %>
 
 
+
 development:
   primary: &primary_development
     <<: *default
-    database: <%= ENV['DEVELOPMENT_PRIMARY'] %>
+    database: <%= ENV['POSTGRES_DB'] %>
     username: <%= ENV['POSTGRES_USER'] %>
     password: <%= ENV['POSTGRES_PASSWORD'] %>
+    host: <%= ENV['POSTGRES_HOST'] %>
   cache:
     <<: *primary_development
     database: <%= ENV['DEVELOPMENT_CACHE'] %>
