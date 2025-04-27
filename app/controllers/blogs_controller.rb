@@ -1,55 +1,80 @@
 class BlogsController < ApplicationController
+  # TODO: Добавить систему классов на топик (Например банальный комментарий оп типу "gem" бует являться классом, а "call" будет являться дизлайком)
+  include Pundit::Authorization
+
   skip_before_action :authorized, only: [:index, :show]
-  
   before_action :set_blog, only: [:show, :update, :destroy]
-  before_action :authorize_blog, only: [:update, :destroy]
 
-  # GET /blogs
   def index
-    page = [params[:page].to_i, 1].max
-    @blogs = Blog.order(created_at: :desc).page(page).per(25)
-    cache_key = "blogs/page:#{page}"
+    cache_key = [
+      "blogs/index",
+      params[:page],
+      Blog.maximum(:updated_at),
+      I18n.locale,
+      current_user&.role
+    ].join(':')
+    
+    result = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      blogs = policy_scope(Blog)
+        .includes(:user)
+        .order(created_at: :desc)
+        .page(params[:page]).per(25)
 
-    cached_data = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
-      serialized_data = BlogSerializer.new(@blogs).serializable_hash
-      meta = pagination_meta(@blogs)
-
-      { data: serialized_data, meta: meta }
+      {
+        data: blogs.map { |b| BlogSerializer.new(b).as_json },
+        meta: pagination_meta(blogs)
+      }
     end
-    render200 data: cached_data[:data], meta: cached_data[:meta]
+    
+    render200 data: result[:data], meta: result[:meta]
   end
 
-  # GET /blogs/:id
   def show
-    cache_key = "blog/#{@blog.id}/with_associations/v1/#{@blog.updated_at.to_i}"
-    cached_data = Rails.cache.fetch(cache_key) do
-      BlogShowSerializer.new(@blog, include: [:user, :comments]).serializable_hash
+    authorize @blog
+    
+    cache_key = [
+      "blog",
+      @blog.cache_key,
+      I18n.locale,
+      current_user&.role
+    ].join(':')
+    
+    blog_data = Rails.cache.fetch(cache_key) do
+      {
+        permissions: {
+          can_edit: policy(@blog).update?,
+          can_destroy: policy(@blog).destroy?
+        },
+        blog: BlogSerializer.new(@blog).as_json
+      }
     end
-
-    render200 data: cached_data
-  rescue ActiveRecord::RecordNotFound
-    render404 data: { error: "Blog not found" }
+    
+    render200 data: blog_data
   end
 
-  # POST /blog
+  # curl -X POST -H "Content-Type: application/json" -d '{ "blog": {"title": "Первый заголовок", "description": "Описание", "content": "Что-то умное пишу тип да"} }' -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0fQ.g3eG3BuQPv8AVFFkHixJ9HBdg1VHod71fcllpk9kZg8" http://localhost/blog
   def create
+    @blog = current_user.blogs.new(create_params)
+    authorize @blog
+
     CreateBlogJob.perform_later(create_params.merge(user_id: current_user.id))
-    Rails.cache.delete_matched("blogs/page:*")
     render202 data: { message: "Blog creation started" }
   end
 
-  # DELETE /blogs/:id
-  def destroy
-    @blog.clear_cache
-    @blog.destroy!
-    render202 data: { message: "Blog deleted successfully" }
+  # curl -X DELETE -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjozfQ.xWvI7pANHIjOPDgF5dgeCYN-r2mp_6DisNMvIhxDmmE" http://localhost/blog/4
+  def update
+    authorize @blog
+    if @blog.update(update_params)
+      render200 message: "Blog updated successfully"
+    else
+      render422 errors: @blog.errors.full_messages
+    end
   end
 
-  # PATCH/PUT /blogs/:id
-  def update
-    if @blog.update(update_params)
-      @blog.clear_cache
-      render200 message: "Blog updated successfully"
+  def destroy
+    authorize @blog
+    if @blog.destroy
+      render200 message: "Blog deleted successfully"
     else
       render422 errors: @blog.errors.full_messages
     end
@@ -78,6 +103,7 @@ class BlogsController < ApplicationController
     render404 data: { error: "Blog not found" }
   end
 
+
   def update_params
     params.require(:blog).permit(:title, :description, :content)
   end
@@ -87,4 +113,11 @@ class BlogsController < ApplicationController
       render403 data: { error: "Not authorized" }
     end
   end
+
+  def cache_fragment(record)
+    Rails.cache.fetch(record.cache_key_with_version) do
+      BlogStaticSerializer.new(record).serializable_hash
+    end
+  end
+
 end

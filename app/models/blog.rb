@@ -1,4 +1,9 @@
 class Blog < ApplicationRecord
+  acts_as_nested_set
+
+  after_commit :invalidate_cache, on: [:create, :update, :destroy]
+  after_touch :invalidate_cache
+
   belongs_to :user
   has_many :comments, -> { order(created_at: :asc) }, dependent: :destroy
 
@@ -12,14 +17,23 @@ class Blog < ApplicationRecord
     against: [:title, :content],
     using: { tsearch: { prefix: true } }
 
-  after_commit :clear_cache
+  private
 
-  def clear_cache
-    Rails.cache.delete("blog/#{id}/with_associations/v1/#{updated_at.to_i}")
-    Rails.cache.delete_matched("blogs/page:*")
-  end
-
-  def cache_key_with_version
-    "#{cache_key}/#{updated_at.to_i}"
+  def invalidate_cache
+    RedisCache.pipelined do
+      # Основные ключи блога
+      RedisCache.del_matched("blog/#{id}-*")
+      RedisCache.del("blogs/index/*")
+      
+      # Кэш связанных данных
+      RedisCache.del("user/#{user_id}/blogs")
+      RedisCache.del("blog/#{id}/comments_tree")
+      
+      # Поисковый индекс
+      RedisCache.del("search/blogs")
+    end
+    
+    # Каскадное обновление пользователя
+    user.touch if persisted? && !destroyed?
   end
 end

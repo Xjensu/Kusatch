@@ -83,3 +83,11 @@ gem "kaminari", "~> 1.2"
 
 gem "fast_jsonapi", "~> 1.5"
 
+
+gem "lograge", "~> 0.14.0"
+
+gem "get_process_mem", "~> 1.0"
+
+gem "faker", "~> 3.5"
+
+gem "awesome_nested_set", "~> 3.8"

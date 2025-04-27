@@ -6,5 +6,5 @@ class BlogShowSerializer
   
   belongs_to :user, serializer: BlogUserSerializer
   has_many :comments, serializer: CommentSerializer
-
+  
 end

@@ -1,4 +1,5 @@
 class UsersController < ApplicationController
+  # TODO: Написать логику подтверждения создания пользователя через email
   skip_before_action :authorized, only: [:create, :show]
   rescue_from ActiveRecord::RecordInvalid, with: :handle_invalid_record
   before_action :set_user, only: [:update, :destroy]
@@ -10,23 +11,28 @@ class UsersController < ApplicationController
     if user.save
       render201 data: { message: 'Registration successful. Please login.' }
     else
-      render422 data: { message: "Could'nt create user" }
+      errors = user.errors.messages.transform_values { |msgs| msgs.join(', ') }
+      render422 data: { message: "Could not create user.", errors: errors }
     end
   end
 
   # curl -X GET -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxfQ.x7TFgYQMgujNSz7xhoc0QfEXHVW8en2NUBwEwUT8wyI" http://localhost/me 
   def me
-    render200 data: { user: UserPrivateSerializer.new(current_user, include: [:blogs]) }
+    user_data = UserPrivateSerializer.new(current_user, include: [:blogs]).serializable_hash
+    render200 data: user_data
   end
 
-  # curl -X GET -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxfQ.x7TFgYQMgujNSz7xhoc0QfEXHVW8en2NUBwEwUT8wyI" http://localhost/user/1 
+  # curl -X GET -H "Content-Type: application/json" http://localhost/user/1 
   def show
-    user = User.includes(:blogs).find(params[:id])
-    if user
-      render200 data: { user: UserSerializer.new(user, include: [:blogs]) } 
-    else
-      render404 data: { message: "User not found" }
+    cache_key = "user/#{params[:id]}/#{User.find(params[:id]).updated_at.to_i}"
+    
+    user_data = Rails.cache.fetch(cache_key, expires_in: 12.hours) do
+      @user = User.includes(:blogs).find(params[:id])
+      serialized = UserSerializer.new(@user, include: [:blogs]).serializable_hash
+      { data: serialized[:data], included: serialized[:included] }
     end
+    
+    render200 data: user_data
   end
 
   # curl -X PATCH -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxfQ.x7TFgYQMgujNSz7xhoc0QfEXHVW8en2NUBwEwUT8wyI" -d '{ "user": { "first_name": "Алексей", "last_name": "Бусько", "password":"123456", "password_confirmation": "123456", "current_password": "1234567" } }' http://localhost/user/update
@@ -41,9 +47,12 @@ class UsersController < ApplicationController
   # curl -X DELETE -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxfQ.x7TFgYQMgujNSz7xhoc0QfEXHVW8en2NUBwEwUT8wyI" http://localhost/user/delete
   def destroy
     if @user.destroy
+      # Удаляем кэш пользователя, его блогов и комментариев
+      Rails.cache.delete_matched("user/#{@user.id}/*")
+      Rails.cache.delete_matched("blogs/*") # На случай, если у пользователя были блоги
       render200 data: { message: 'User deleted successfully' }
     else
-      render422 data: { errors: @user.errors.full_messages } # Or perhaps 500 if unexpected
+      render422 data: { errors: @user.errors.full_messages }
     end
   end
 

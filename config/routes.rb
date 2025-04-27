@@ -18,8 +18,15 @@ Rails.application.routes.draw do
   post "/auth/login", to: "auth#login"
 
   get '/blogs', to: 'blogs#index'
-  get '/blogs/:id', to: 'blogs#show'
+  get '/blog/:id', to: 'blogs#show'
   post 'blog', to: 'blogs#create'
   delete '/blog/:id', to: 'blogs#destroy'
+  patch '/blog/update/:id', to: 'blogs#update'
+
+  post '/blog/:id/create/comment', to: 'comments#create'
+  get '/blog/:blog_id/comments', to: 'comments#index'
+  get '/comments/:id', to: 'comments#show'
+  patch '/comments/:id', to: 'comments#update'
+  delete '/comments/:id', to: 'comments#destroy'
 end
   

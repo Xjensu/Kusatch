@@ -18,12 +18,16 @@ class CreateBlogJob < ApplicationJob
         content: blog_params[:content]
       )
 
+      Pundit.authorize(user, blog, :create?)
+
       if blog.save
         Rails.logger.info "Blog created: #{blog.title} (ID: #{blog.id})"
       else
         Rails.logger.error "Failed to create blog: #{blog.errors.full_messages}"
       end
     end
+  rescue Pundit::NotAuthorizedError => e
+    Rails.logger.error "Authorization failed: #{e.message}"
   rescue => e
     Rails.logger.error "Error in CreateBlogJob: #{e.message}\n#{e.backtrace.join("\n")}"
   end

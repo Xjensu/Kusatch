@@ -44,7 +44,11 @@ Rails.application.configure do
     pool: {
       size: 5,
       timeout: 5
-    }
+    },
+    connect_timeout: 1, 
+    read_timeout: 0.5,
+    write_timeout: 0.5,
+    compress: true
   }
 
   # Store uploaded files on the local file system (see config/storage.yml for options).
