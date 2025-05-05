@@ -65,7 +65,7 @@ gem "oj"
 
 gem "bullet", "~> 8.0"
 
-gem "honeybadger", "~> 5.27"
+gem "honeybadger", "~> 5.28"
 
 gem "sidekiq-cron", "~> 2.2"
 
