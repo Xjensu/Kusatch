@@ -36,7 +36,7 @@ class BlogsController < ApplicationController
       "blog",
       @blog.cache_key,
       I18n.locale,
-      current_user&.role
+      current_user&.admin
     ].join(':')
     
     blog_data = Rails.cache.fetch(cache_key) do
@@ -57,8 +57,11 @@ class BlogsController < ApplicationController
     @blog = current_user.blogs.new(create_params)
     authorize @blog
 
-    CreateBlogJob.perform_later(create_params.merge(user_id: current_user.id))
-    render202 data: { message: "Blog creation started" }
+    if @blog.save
+      render202 data: { message: "Blog created succesfully" }
+    else 
+      render422 data: { message: "Failed to create blog: #{@blog.errors.full_messages}" }
+    end
   end
 
   # curl -X DELETE -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjozfQ.xWvI7pANHIjOPDgF5dgeCYN-r2mp_6DisNMvIhxDmmE" http://localhost/blog/4

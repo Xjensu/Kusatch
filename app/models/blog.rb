@@ -1,6 +1,4 @@
 class Blog < ApplicationRecord
-  acts_as_nested_set
-
   after_commit :invalidate_cache, on: [:create, :update, :destroy]
   after_touch :invalidate_cache
 
@@ -22,8 +20,8 @@ class Blog < ApplicationRecord
   def invalidate_cache
     RedisCache.pipelined do
       # Основные ключи блога
-      RedisCache.del_matched("blog/#{id}-*")
-      RedisCache.del("blogs/index/*")
+      delete_matched_keys("blog/#{id}-*")
+      delete_matched_keys("blogs/index/*")
       
       # Кэш связанных данных
       RedisCache.del("user/#{user_id}/blogs")
@@ -33,7 +31,13 @@ class Blog < ApplicationRecord
       RedisCache.del("search/blogs")
     end
     
-    # Каскадное обновление пользователя
-    user.touch if persisted? && !destroyed?
+    # Убрали user.touch чтобы избежать рекурсии
+    # Вместо этого явно инвалидируем кэш пользователя
+    RedisCache.del("user/#{user_id}")
+    RedisCache.del("user/mini/#{user_id}")
+  end
+
+  def delete_matched_keys(pattern)
+    RedisCache.scan_each(match: pattern) { |key| RedisCache.del(key) }
   end
 end

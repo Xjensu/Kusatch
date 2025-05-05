@@ -45,17 +45,18 @@ class User < ApplicationRecord
 
   def invalidate_cache
     RedisCache.pipelined do
-      # Основные ключи пользователя
-      RedisCache.del_matched("user/#{id}/*")
+      delete_matched_keys("user/#{id}/*")
       RedisCache.del("user/mini/#{id}")
-      
-      # Связанные данные
-      RedisCache.del_matched("blogs/author/#{id}/*")
-      RedisCache.del_matched("comments/author/#{id}/*")
+
+      delete_matched_keys("blogs/author/#{id}/*")
+      delete_matched_keys("comments/author/#{id}/*")
     end
-    
-    # Каскадное обновление всех связанных записей
-    blogs.find_each(&:touch) if persisted? && !destroyed?
-    comments.find_each(&:touch) if persisted? && !destroyed?
+
+    delete_matched_keys("blog/*/comments_tree")
+    delete_matched_keys("user/#{id}/blogs")
+  end
+
+  def delete_matched_keys(pattern)
+    RedisCache.scan_each(match: pattern) { |key| RedisCache.del(key) }
   end
 end

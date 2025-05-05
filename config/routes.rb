@@ -25,7 +25,6 @@ Rails.application.routes.draw do
 
   post '/blog/:id/create/comment', to: 'comments#create'
   get '/blog/:blog_id/comments', to: 'comments#index'
-  get '/comments/:id', to: 'comments#show'
   patch '/comments/:id', to: 'comments#update'
   delete '/comments/:id', to: 'comments#destroy'
 end

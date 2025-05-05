@@ -30,7 +30,7 @@ class CommentsController < ApplicationController
     authorize @comment
   
     if @comment.save
-      render201 data: CommentSerializer.new(@comment).as_json
+      render201 message: 'Comment create successfully'
     else
       render422 errors: format_errors(@comment.errors)
     end
@@ -39,7 +39,7 @@ class CommentsController < ApplicationController
   def update
     authorize @comment
     if @comment.update(update_params)
-      render200 data: CommentSerializer.new(@comment).as_json
+      render200 message: 'Comment update successfully'
     else
       render422 errors: format_errors(@comment.errors)
     end
@@ -89,7 +89,7 @@ class CommentsController < ApplicationController
   end
 
   def create_params
-    params.require(:comment).permit(:parent_comment_id, :text).merge(blog_id: params[:blog_id])
+    params.require(:comment).permit(:parent_comment_id, :text).merge(blog_id: params[:id])
   end
 
   def update_params
