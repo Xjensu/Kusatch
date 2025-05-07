@@ -11,6 +11,10 @@ class Comment < ApplicationRecord
   validates :user_id, presence: true
   validates :text, presence: { message: "can't be blank" }
 
+  def self.starts_with(column_name, prefix)
+    where("lower(#{column_name}) like ?", "#{prefix.downcase}%")
+  end
+
   private
 
   def invalidate_cache
@@ -46,4 +50,5 @@ class Comment < ApplicationRecord
   def delete_matched_keys(pattern)
     RedisCache.scan_each(match: pattern) { |key| RedisCache.del(key) }
   end
+  
 end

@@ -27,5 +27,7 @@ Rails.application.routes.draw do
   get '/blog/:blog_id/comments', to: 'comments#index'
   patch '/comments/:id', to: 'comments#update'
   delete '/comments/:id', to: 'comments#destroy'
+
+  get '/blogs/populars', to: 'blogs#popular'
 end
   

@@ -9,8 +9,7 @@ class CommentsController < ApplicationController
     cache_key = [
       "blog/#{@blog.id}/comments_tree",
       @blog.comments.maximum(:updated_at),
-      I18n.locale,
-      current_user&.role
+      I18n.locale
     ].join(':')
     
     comments_tree = Rails.cache.fetch(cache_key) do

@@ -2,7 +2,7 @@ class BlogsController < ApplicationController
   # TODO: Добавить систему классов на топик (Например банальный комментарий оп типу "gem" бует являться классом, а "call" будет являться дизлайком)
   include Pundit::Authorization
 
-  skip_before_action :authorized, only: [:index, :show]
+  skip_before_action :authorized, only: [:index, :show, :popular]
   before_action :set_blog, only: [:show, :update, :destroy]
 
   def index
@@ -83,6 +83,31 @@ class BlogsController < ApplicationController
     end
   end
 
+  # Получить 3 популярных блога недели
+  def popular
+    cache_key = [
+      "blogs/popular/weekly",
+      Comment.maximum(:updated_at),
+      I18n.locale
+    ].join(':')
+    
+    popular_blogs = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      blogs = Blog.top_weekly_by_likes
+      
+      if blogs.empty?
+        # Если нет блогов с лайками, можно вернуть самые новые блоги
+        Blog.where(created_at: 1.week.ago..Time.current)
+            .order(created_at: :desc)
+            .limit(3)
+            .map { |blog| blog_attributes(blog, 0) }
+      else
+        blogs.map { |blog| blog_attributes(blog, blog.net_likes) }
+      end
+    end
+    
+    render200 data: popular_blogs
+  end
+
   private
 
   def create_params
@@ -97,6 +122,16 @@ class BlogsController < ApplicationController
       per_page: object.limit_value,
       next_page: object.next_page,
       prev_page: object.prev_page
+    }
+  end
+
+  def blog_attributes(blog, net_likes)
+    {
+      id: blog.id,
+      title: blog.title,
+      description: blog.description,
+      net_likes: net_likes,
+      created_at: blog.created_at.strftime("%Y-%m-%d")
     }
   end
 

@@ -15,6 +15,20 @@ class Blog < ApplicationRecord
     against: [:title, :content],
     using: { tsearch: { prefix: true } }
 
+  # Получить 3 блога с наибольшим количетсвом лайков
+  def self.top_weekly_by_likes(limit = 3)
+    where(created_at: 1.week.ago..Time.current)
+      .left_joins(:comments)
+      .select('blogs.*')
+      .select('SUM(CASE WHEN lower(comments.text) LIKE \'gem.%\' THEN 1 ELSE 0 END) - 
+               SUM(CASE WHEN lower(comments.text) LIKE \'coal%\' THEN 1 ELSE 0 END) AS net_likes')
+      .group('blogs.id')
+      .having('SUM(CASE WHEN lower(comments.text) LIKE \'gem.%\' THEN 1 ELSE 0 END) - 
+               SUM(CASE WHEN lower(comments.text) LIKE \'coal%\' THEN 1 ELSE 0 END) > 0')
+      .order('net_likes DESC')
+      .limit(limit)
+  end
+
   private
 
   def invalidate_cache
