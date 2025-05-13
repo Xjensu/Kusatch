@@ -67,7 +67,7 @@ gem "bullet", "~> 8.0"
 
 gem "honeybadger", "~> 5.27"
 
-gem "sidekiq-cron", "~> 2.2"
+gem "sidekiq-cron", "~> 2.3"
 
 gem "devise", "~> 4.9"
 
