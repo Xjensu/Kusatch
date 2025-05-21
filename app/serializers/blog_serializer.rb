@@ -2,7 +2,7 @@ class BlogSerializer
   include FastJsonapi::ObjectSerializer
   
   set_type :blog
-  attributes :user_id, :title, :description
+  attributes :user_id, :title, :description, :content
   
   attribute :created_at do |object|
     object.created_at.strftime("%Y-%m-%d")

@@ -10,12 +10,13 @@ class CommentPolicy < ApplicationPolicy
 
   # Может только создатель блога и админ
   def update?
-    user.present? && (record.user == user || user.admin?)
+    Rails.logger.info "Checking update permissions: user=#{user&.id}, record.user=#{record.user.id}, admin=#{user&.admin?}"
+    user.present? && (record.user_id == user.id || user.admin?)
   end
 
    # Удалять может создатель или админ
   def destroy?
-    user.present? && (record.user == user || user.admin?)
+    user.present? && (record.user_id == user.id || user.admin?)
   end
 
   def can_modify?

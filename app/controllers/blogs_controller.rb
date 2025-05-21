@@ -9,9 +9,8 @@ class BlogsController < ApplicationController
     cache_key = [
       "blogs/index",
       params[:page],
-      Blog.maximum(:updated_at),
       I18n.locale,
-      current_user&.role
+      Blog.maximum(:updated_at)
     ].join(':')
     
     result = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
@@ -31,14 +30,13 @@ class BlogsController < ApplicationController
 
   def show
     authorize @blog
-    
+
     cache_key = [
       "blog",
-      @blog.cache_key,
-      I18n.locale,
-      current_user&.admin
+      @blog.cache_key_with_version,
+      I18n.locale
     ].join(':')
-    
+
     blog_data = Rails.cache.fetch(cache_key) do
       {
         permissions: {
@@ -48,7 +46,7 @@ class BlogsController < ApplicationController
         blog: BlogSerializer.new(@blog).as_json
       }
     end
-    
+
     render200 data: blog_data
   end
 
@@ -77,6 +75,7 @@ class BlogsController < ApplicationController
   def destroy
     authorize @blog
     if @blog.destroy
+      @blog.invalidate_cache
       render200 message: "Blog deleted successfully"
     else
       render422 errors: @blog.errors.full_messages

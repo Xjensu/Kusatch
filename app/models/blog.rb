@@ -2,7 +2,7 @@ class Blog < ApplicationRecord
   after_commit :invalidate_cache, on: [:create, :update, :destroy]
   after_touch :invalidate_cache
 
-  belongs_to :user
+  belongs_to :user, touch: true
   has_many :comments, -> { order(created_at: :asc) }, dependent: :destroy
 
   validates :user_id, presence: true
@@ -32,21 +32,24 @@ class Blog < ApplicationRecord
   private
 
   def invalidate_cache
-    RedisCache.pipelined do
-      # Основные ключи блога
-      delete_matched_keys("blog/#{id}-*")
-      delete_matched_keys("blogs/index/*")
-      
-      # Кэш связанных данных
-      RedisCache.del("user/#{user_id}/blogs")
-      RedisCache.del("blog/#{id}/comments_tree")
-      
-      # Поисковый индекс
-      RedisCache.del("search/blogs")
+    locales = I18n.available_locales.map(&:to_s) # или список используемых локалей
+
+    # 1. Инвалидируем кэш конкретного блога
+    locales.each do |locale|
+      RedisCache.del("blog:#{self.cache_key_with_version}:#{locale}")
     end
-    
-    # Убрали user.touch чтобы избежать рекурсии
-    # Вместо этого явно инвалидируем кэш пользователя
+
+    # 2. Инвалидируем index-кэш
+    RedisCache.scan_each(match: "blogs/index:*") do |key|
+      RedisCache.del(key)
+    end
+
+    # 3. Инвалидируем популярные блоги
+    RedisCache.scan_each(match: "blogs/popular/weekly:*") do |key|
+      RedisCache.del(key)
+    end
+
+    # 4. Опционально: пользовательские кэши
     RedisCache.del("user/#{user_id}")
     RedisCache.del("user/mini/#{user_id}")
   end

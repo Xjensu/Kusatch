@@ -9,17 +9,16 @@ class CommentsController < ApplicationController
     cache_key = [
       "blog/#{@blog.id}/comments_tree",
       @blog.comments.maximum(:updated_at),
-      I18n.locale
+      I18n.locale,
+      current_user&.id,
+      current_user&.admin?
     ].join(':')
-    
     comments_tree = Rails.cache.fetch(cache_key) do
       root_comments = @blog.comments.where(parent_comment_id: nil)
                            .includes(:user, comments: [:user])
                            .order(created_at: :desc)
-      
       root_comments.map { |comment| format_comment_with_children(comment) }
     end
-    
     render200 data: comments_tree
   end
 
@@ -52,14 +51,14 @@ class CommentsController < ApplicationController
 
   private
 
-  def format_comment_with_children(comment)
+   def format_comment_with_children(comment)
     {
       id: comment.id,
       text: comment.text,
       created_at: comment.created_at,
       commentator: comment.user.username,
-      can_edit: current_user ? policy(comment).edit? : false,
-      can_destroy: current_user ? policy(comment).destroy? : false,
+      can_edit: policy(comment).update?,
+      can_destroy: policy(comment).destroy?,
       comments: comment.comments.order(created_at: :desc).map { |c| format_comment_with_children(c) }
     }
   end
